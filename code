@@ -1,0 +1,43 @@
+# 1.convert heterogeneous genotypes to homozygous in Tassel
+
+# 2.Initial filter → remove very bad SNPs
+vcftools \
+--vcf you.file_homozygous.vcf \
+--remove-filtered-geno-all \
+--max-missing 0.5 \
+--maf 0.01 \
+--recode --recode-INFO-all --stdout|gzip -c > you.file_homozygous.MAF0.01.Missingrate0.5.vcf.gz
+
+gunzip you.file_homozygous.MAF0.01.Missingrate0.5.vcf.gz
+# 3. impute
+
+java -jar ./beagle.27Feb25.75f.jar gt=./you.file_homozygous.MAF0.01.Missingrate0.5.vcf out=./you.file_homozygous.MAF0.01.Missingrate0.5.impute
+
+gunzip you.file_homozygous.MAF0.01.Missingrate0.5.impute.vcf
+# 4. Final filtering
+vcftools \
+--vcf you.file_homozygous.MAF0.01.Missingrate0.5.impute.vcf \
+--remove-filtered-geno-all \
+--max-missing 0.7 \
+--maf 0.05 \
+--recode --recode-INFO-all --stdout|gzip -c > you.file_homozygous.MAF0.01.Missingrate0.5.impute.MAF0.05.Missingrate0.3.vcf.gz
+
+gunzip you.file_homozygous.MAF0.01.Missingrate0.5.impute.MAF0.05.Missingrate0.3.vcf.gz
+
+# 5.change to plink format
+
+# make-bed
+conda activate NGS
+
+plink \
+--vcf you.file_homozygous.MAF0.01.Missingrate0.5.impute.MAF0.05.Missingrate0.3.vcf \
+--make-bed \
+--out you.file_homozygous.MAF0.01.Missingrate0.5.impute.MAF0.05.Missingrate0.3 \
+--double-id \
+--allow-extra-chr
+
+# 6.faststructure
+cd /lustre/hdd/LAS/jmyu-lab/ddli/faststructure.09052025
+for K in {1..10};
+do structure.py --cv=10 --input=you.file_filter -K $K --output=faststructure
+done
